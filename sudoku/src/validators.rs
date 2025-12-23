@@ -1,57 +1,40 @@
 /// Validate if a number can be placed in a position on a given grid
 pub fn is_valid(grid: [[usize; 9]; 9], y: usize, x: usize, n: usize) -> bool {
-  // Fail validation if n exists in row
-  for i in 0..9 {
-    if grid[y][i] == n {
-      return false;
-    }
-  }
+    let in_row = (0..9).any(|i| grid[y][i] == n);
+    let in_col = (0..9).any(|i| grid[i][x] == n);
 
-  // Fail validation if n exists in column
-  for i in 0..9 {
-    if grid[i][x] == n {
-      return false;
-    }
-  }
+    let box_y = (y / 3) * 3;
+    let box_x = (x / 3) * 3;
+    let in_box = (0..3).any(|i| (0..3).any(|j| grid[box_y + i][box_x + j] == n));
 
-  // Fail validation if n exists in square
-  let x0 = (x/3)*3;
-  let y0 = (y/3)*3;
-  for i in 0..3 {
-    for j in 0..3 {
-      if grid[i+y0][j+x0] == n {
-        return false
-      }
-    }
-  }
-
-  // Validation passes
-  return true;
+    !in_row && !in_col && !in_box
 }
 
+/// Solve the sudoku puzzle using backtracking
 pub fn solve(grid: &mut [[usize; 9]; 9]) -> bool {
-  let mut filled = true;
-  for y in 0..9 {
-    for x in 0..9 {
-      if grid[y][x] == 0 {
-        filled = false;
-        for n in 1..=9 {
-          if is_valid(*grid, y, x, n) {
+    // Find the next empty cell
+    let empty_cell = (0..9)
+        .flat_map(|y| (0..9).map(move |x| (y, x)))
+        .find(|&(y, x)| grid[y][x] == 0);
+
+    let Some((y, x)) = empty_cell else {
+        return true; // No empty cells = solved
+    };
+
+    // Try each number 1-9
+    for n in 1..=9 {
+        if is_valid(*grid, y, x, n) {
             grid[y][x] = n;
 
-            if !solve(grid) {
-              grid[y][x] = 0;
-            } else {
-              return true;
+            if solve(grid) {
+                return true;
             }
-          }
-        }
-        return filled;
-      }
-    }
-  }
 
-  return filled;
+            grid[y][x] = 0; // Backtrack
+        }
+    }
+
+    false // No valid number found
 }
 
 #[cfg(test)]
@@ -72,22 +55,22 @@ mod tests {
 
   #[test]
   fn row_is_not_valid() {
-    assert_eq!(is_valid(GRID, 0, 5, 1), false);
+    assert!(!is_valid(GRID, 0, 5, 1));
   }
 
   #[test]
   fn column_is_not_valid() {
-    assert_eq!(is_valid(GRID, 5, 0, 1), false);
+    assert!(!is_valid(GRID, 5, 0, 1));
   }
 
   #[test]
-  fn house_is_not_valid() {
-    assert_eq!(is_valid(GRID, 2, 1, 1), false);
+  fn box_is_not_valid() {
+    assert!(!is_valid(GRID, 2, 1, 1));
   }
 
   #[test]
-  fn grid_is_valid() {
-    assert_eq!(is_valid(GRID, 1, 4, 1), true);
+  fn placement_is_valid() {
+    assert!(is_valid(GRID, 1, 4, 1));
   }
 
   #[test]
